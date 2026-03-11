@@ -49,12 +49,10 @@ export default function AdminLayout({ children }) {
       Users
     </Link>
 
-    <Link
-      href="/admin/campaigns"
-      className="block px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700 transition"
-    >
-      Campaigns
-    </Link>
+    {/* Change this line in your layout.jsx */}
+<Link href="/admin/campaigns" className="block px-4 py-2 rounded-lg hover:bg-indigo-800 hover:text-white transition-colors">
+  Campaigns
+</Link>
 
     <Link
       href="/admin/transactions"
