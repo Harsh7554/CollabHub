@@ -1,41 +1,54 @@
 "use client";
-import { useState } from "react";
 
-export default function Notifications() {
+import React, { useState, useMemo } from "react";
 
+export default function NotificationsPage() {
+  // 1. Expanded Mock Data (Added 'type' for icons)
   const [notifications, setNotifications] = useState([
     {
       id: 1,
+      type: "user",
       title: "New Creator Registration",
-      message: "A new creator has joined the platform.",
+      message: "Sara Smith has joined the platform as an Influencer.",
       time: "2 minutes ago",
       read: false
     },
     {
       id: 2,
+      type: "campaign",
       title: "Campaign Submitted",
-      message: "Brand XYZ submitted a new campaign.",
+      message: "Brand XYZ submitted a new 'Summer Vibes' campaign for review.",
       time: "10 minutes ago",
       read: false
     },
     {
       id: 3,
+      type: "payment",
       title: "Payment Received",
-      message: "Payment received for campaign #1023.",
+      message: "Payment of ₹45,000 received for campaign TX-1005.",
       time: "1 hour ago",
       read: true
+    },
+    {
+      id: 4,
+      type: "alert",
+      title: "Action Required",
+      message: "You have 3 pending user approvals waiting in the queue.",
+      time: "3 hours ago",
+      read: false
     }
   ]);
 
+  // 2. State for Toolbar
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  // Mark as read
+  // --- Functions --- //
+
+  // Mark single notification as read
   const markRead = (id) => {
     setNotifications(
-      notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      )
+      notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
 
@@ -53,119 +66,149 @@ export default function Notifications() {
     );
   };
 
-  // Filter logic
-  const filteredNotifications = notifications
-    .filter((n) =>
-      n.title.toLowerCase().includes(search.toLowerCase())
-    )
-    .filter((n) => {
-      if (filter === "read") return n.read;
-      if (filter === "unread") return !n.read;
-      return true;
-    });
+  // 3. Derived State: Filtering & Unread Count
+  const filteredNotifications = useMemo(() => {
+    return notifications
+      .filter((n) => n.title.toLowerCase().includes(search.toLowerCase()) || n.message.toLowerCase().includes(search.toLowerCase()))
+      .filter((n) => {
+        if (filter === "read") return n.read;
+        if (filter === "unread") return !n.read;
+        return true;
+      });
+  }, [notifications, search, filter]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Helper function to render the right icon/color based on notification type
+  const getIconData = (type) => {
+    switch (type) {
+      case 'user': return { icon: "👤", bg: "bg-indigo-100", color: "text-indigo-600" };
+      case 'campaign': return { icon: "📢", bg: "bg-teal-100", color: "text-teal-600" };
+      case 'payment': return { icon: "₹", bg: "bg-emerald-100", color: "text-emerald-600" };
+      case 'alert': return { icon: "⚠️", bg: "bg-rose-100", color: "text-rose-600" };
+      default: return { icon: "🔔", bg: "bg-slate-100", color: "text-slate-600" };
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="space-y-6">
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-
-        <h1 className="text-2xl font-semibold text-gray-800">
-          Notifications
-        </h1>
+      {/* Header & Global Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-indigo-950">Notifications</h1>
+          {/* Unread Badge */}
+          {unreadCount > 0 && (
+            <span className="bg-rose-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+              {unreadCount} New
+            </span>
+          )}
+        </div>
 
         <button
           onClick={markAllRead}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          disabled={unreadCount === 0}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm
+            ${unreadCount > 0 
+              ? "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50" 
+              : "bg-slate-100 text-slate-400 cursor-not-allowed border border-transparent"
+            }`}
         >
           Mark All as Read
         </button>
-
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex gap-4 mb-6">
-
+      {/* Toolbar: Search + Filter */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
         <input
           type="text"
           placeholder="Search notifications..."
-          className="border p-2 rounded w-full"
+          className="w-full sm:w-80 border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-500 transition-all"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-
         <select
-          className="border p-2 rounded"
+          className="w-full sm:w-auto bg-slate-50 border border-slate-300 text-slate-700 py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer text-sm"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
-          <option value="all">All</option>
-          <option value="unread">Unread</option>
-          <option value="read">Read</option>
+          <option value="all">All Notifications</option>
+          <option value="unread">Unread Only</option>
+          <option value="read">Read Only</option>
         </select>
-
       </div>
 
       {/* Notification List */}
-      <div className="bg-white shadow rounded-lg divide-y">
-
-        {filteredNotifications.length === 0 && (
-          <p className="p-6 text-gray-500">
-            No notifications found.
-          </p>
-        )}
-
-        {filteredNotifications.map((n) => (
-
-          <div
-            key={n.id}
-            className={`p-5 flex justify-between items-start ${
-              !n.read ? "bg-blue-50" : ""
-            }`}
-          >
-
-            {/* Notification Content */}
-            <div>
-
-              <h3 className="font-semibold text-gray-800">
-                {n.title}
-              </h3>
-
-              <p className="text-gray-600 text-sm mt-1">
-                {n.message}
-              </p>
-
-              <span className="text-xs text-gray-400">
-                {n.time}
-              </span>
-
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-
-              {!n.read && (
-                <button
-                  onClick={() => markRead(n.id)}
-                  className="text-green-600 text-sm"
-                >
-                  Mark Read
-                </button>
-              )}
-
-              <button
-                onClick={() => deleteNotification(n.id)}
-                className="text-red-500 text-sm"
-              >
-                Delete
-              </button>
-
-            </div>
-
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        {filteredNotifications.length === 0 ? (
+          <div className="p-10 text-center flex flex-col items-center">
+            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-2xl mb-3">📭</div>
+            <h3 className="text-lg font-semibold text-indigo-950">All Caught Up!</h3>
+            <p className="text-slate-500 text-sm mt-1">You have no notifications matching this criteria.</p>
           </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {filteredNotifications.map((n) => {
+              const iconData = getIconData(n.type);
+              
+              return (
+                <div
+                  key={n.id}
+                  className={`p-5 flex flex-col sm:flex-row justify-between items-start gap-4 transition-colors
+                    ${!n.read ? "bg-teal-50/30 border-l-4 border-l-teal-500" : "bg-white border-l-4 border-l-transparent hover:bg-slate-50"}
+                  `}
+                >
+                  
+                  {/* Notification Content */}
+                  <div className="flex gap-4 items-start flex-1 min-w-0">
+                    
+                    {/* Icon */}
+                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-lg mt-0.5 ${iconData.bg} ${iconData.color}`}>
+                      {iconData.icon}
+                    </div>
 
-        ))}
+                    {/* Text */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className={`text-sm ${!n.read ? "font-bold text-indigo-950" : "font-semibold text-slate-800"}`}>
+                          {n.title}
+                        </h3>
+                        {/* Unread dot indicator for mobile */}
+                        {!n.read && <span className="w-2 h-2 rounded-full bg-teal-500 sm:hidden"></span>}
+                      </div>
+                      <p className={`text-sm mt-1 leading-snug ${!n.read ? "text-slate-700" : "text-slate-500"}`}>
+                        {n.message}
+                      </p>
+                      <span className="text-xs text-slate-400 mt-2 block font-medium">
+                        {n.time}
+                      </span>
+                    </div>
+                  </div>
 
+                  {/* Actions (Buttons) */}
+                  <div className="flex items-center gap-2 sm:mt-0 mt-3 self-end sm:self-center">
+                    {!n.read && (
+                      <button
+                        onClick={() => markRead(n.id)}
+                        className="text-teal-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-teal-50 border border-transparent hover:border-teal-100 transition-colors"
+                      >
+                        Mark Read
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteNotification(n.id)}
+                      className="text-rose-500 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

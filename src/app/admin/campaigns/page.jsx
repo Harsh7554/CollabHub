@@ -1,11 +1,11 @@
-"use client"; // Required for Next.js app router to use state and interactivity
+"use client";
 
 import React, { useState, useMemo } from 'react';
 
 export default function CampaignsPage() {
   // 1. Initial State (Mock Data)
   const [campaigns, setCampaigns] = useState([
-    { id: 1, name: 'Summer Influencer Collab', status: 'Active', spent: 25000, budget: 50000, startDate: '2026-03-01' },
+    { id: 1, name: 'Summer Influencer Collab', status: 'Active', spent: 45000, budget: 50000, startDate: '2026-03-01' },
     { id: 2, name: 'Winter Product Launch', status: 'Draft', spent: 0, budget: 20000, startDate: '2026-11-15' },
     { id: 3, name: 'Spring Brand Awareness', status: 'Completed', spent: 75000, budget: 75000, startDate: '2026-01-10' },
     { id: 4, name: 'Diwali Mega Sale', status: 'Active', spent: 10000, budget: 100000, startDate: '2026-10-01' },
@@ -14,14 +14,15 @@ export default function CampaignsPage() {
   // 2. Control States for UI
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // 3. Form State for New Campaign
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  // 3. Form States
   const [newCampaign, setNewCampaign] = useState({ name: '', budget: '', status: 'Draft' });
+  const [editingCampaign, setEditingCampaign] = useState(null); // Holds the campaign currently being edited
 
   // --- Functions --- //
 
-  // Filter campaigns dynamically based on search and dropdown
+  // Filter campaigns dynamically
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter(camp => {
       const matchesSearch = camp.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -32,7 +33,7 @@ export default function CampaignsPage() {
 
   // Handle Deleting a Campaign
   const handleDelete = (id) => {
-    if(confirm("Are you sure you want to delete this campaign?")) {
+    if(confirm("Are you sure you want to permanently delete this campaign?")) {
       setCampaigns(campaigns.filter(camp => camp.id !== id));
     }
   };
@@ -43,7 +44,7 @@ export default function CampaignsPage() {
     if (!newCampaign.name || !newCampaign.budget) return;
 
     const campaignToAdd = {
-      id: campaigns.length + 1,
+      id: Date.now(), 
       name: newCampaign.name,
       status: newCampaign.status,
       spent: 0,
@@ -52,11 +53,25 @@ export default function CampaignsPage() {
     };
 
     setCampaigns([campaignToAdd, ...campaigns]);
-    setNewCampaign({ name: '', budget: '', status: 'Draft' }); // Reset form
-    setIsModalOpen(false); // Close modal
+    setNewCampaign({ name: '', budget: '', status: 'Draft' });
+    setIsCreateModalOpen(false);
   };
 
-  // --- Render --- //
+  // Handle Updating an Existing Campaign
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    if (!editingCampaign.name || !editingCampaign.budget) return;
+
+    setCampaigns(campaigns.map(camp => 
+      camp.id === editingCampaign.id ? { 
+        ...editingCampaign, 
+        budget: parseFloat(editingCampaign.budget),
+        spent: parseFloat(editingCampaign.spent) || 0 // We added this line to safely save the updated spent amount
+      } : camp
+    ));
+    setEditingCampaign(null);
+  };
+
   return (
     <div className="space-y-6">
       
@@ -67,10 +82,10 @@ export default function CampaignsPage() {
           <p className="text-slate-500 mt-1">Manage, track, and create your marketing efforts.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-teal-500 text-white px-5 py-2.5 rounded-lg hover:bg-teal-600 font-medium shadow-sm transition-all transform hover:scale-105"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="bg-teal-500 text-white px-5 py-2.5 rounded-lg hover:bg-teal-600 font-medium shadow-sm transition-all flex items-center gap-2"
         >
-          + Create Campaign
+          <span>+</span> Create Campaign
         </button>
       </div>
 
@@ -98,10 +113,10 @@ export default function CampaignsPage() {
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
         <input 
           type="text" 
-          placeholder="Search campaigns..." 
+          placeholder="Search campaigns by name..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full sm:w-80 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all text-sm"
+          className="w-full sm:w-80 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm"
         />
         <select 
           value={statusFilter}
@@ -123,21 +138,29 @@ export default function CampaignsPage() {
               <tr>
                 <th className="py-4 px-6 text-sm font-semibold text-indigo-950">Campaign Details</th>
                 <th className="py-4 px-6 text-sm font-semibold text-indigo-950">Status</th>
-                <th className="py-4 px-6 text-sm font-semibold text-indigo-950">Budget & Progress</th>
+                <th className="py-4 px-6 text-sm font-semibold text-indigo-950 w-1/3">Budget & Progress</th>
                 <th className="py-4 px-6 text-sm font-semibold text-indigo-950 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCampaigns.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="py-8 text-center text-slate-500">No campaigns found.</td>
+                  <td colSpan="4" className="py-12 text-center">
+                    <div className="text-4xl mb-3">📂</div>
+                    <p className="text-slate-500 font-medium">No campaigns found.</p>
+                  </td>
                 </tr>
               ) : (
                 filteredCampaigns.map((camp) => {
                   const progressPercentage = camp.budget > 0 ? (camp.spent / camp.budget) * 100 : 0;
                   
+                  // Visual warning if spending is over 90%
+                  const isNearingLimit = progressPercentage >= 90;
+                  const barColor = isNearingLimit ? 'bg-rose-500' : 'bg-teal-500';
+                  
                   return (
                     <tr key={camp.id} className="hover:bg-slate-50 transition-colors">
+                      
                       {/* Name & Date */}
                       <td className="py-4 px-6">
                         <p className="font-medium text-slate-900">{camp.name}</p>
@@ -146,34 +169,41 @@ export default function CampaignsPage() {
                       
                       {/* Status Badge */}
                       <td className="py-4 px-6">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border
                           ${camp.status === 'Active' ? 'bg-teal-50 text-teal-700 border-teal-200' : 
                             camp.status === 'Completed' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                            'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                            'bg-slate-100 text-slate-700 border-slate-200'}`}>
                           {camp.status}
                         </span>
                       </td>
 
                       {/* Budget Progress Bar */}
                       <td className="py-4 px-6">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-slate-500">Spent: ₹{camp.spent.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className={`${isNearingLimit ? 'text-rose-600 font-medium' : 'text-slate-500'}`}>
+                            Spent: ₹{camp.spent.toLocaleString('en-IN')}
+                          </span>
                           <span className="font-medium text-slate-700">₹{camp.budget.toLocaleString('en-IN')}</span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
                           <div 
-                            className={`h-2 rounded-full ${progressPercentage >= 100 ? 'bg-rose-500' : 'bg-teal-500'}`}
+                            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
                             style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                           ></div>
                         </div>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-4 px-6 text-right space-x-4">
-                        <button className="text-indigo-600 hover:text-indigo-800 font-medium text-sm transition-colors">Edit</button>
+                      <td className="py-4 px-6 text-right space-x-3 flex justify-end">
+                        <button 
+                          onClick={() => setEditingCampaign(camp)}
+                          className="text-indigo-600 hover:text-indigo-800 font-medium text-sm transition-colors border border-slate-200 px-3 py-1.5 rounded-md hover:bg-indigo-50 bg-white"
+                        >
+                          Edit
+                        </button>
                         <button 
                           onClick={() => handleDelete(camp.id)}
-                          className="text-rose-500 hover:text-rose-700 font-medium text-sm transition-colors"
+                          className="text-rose-500 hover:text-rose-700 font-medium text-sm transition-colors border border-slate-200 px-3 py-1.5 rounded-md hover:bg-rose-50 bg-white"
                         >
                           Delete
                         </button>
@@ -188,64 +218,107 @@ export default function CampaignsPage() {
       </div>
 
       {/* --- Modal Overlay for Creating Campaign --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-xl font-bold text-indigo-950">Create New Campaign</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
             </div>
             
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Campaign Name</label>
                 <input 
-                  type="text" 
-                  required
-                  value={newCampaign.name}
+                  type="text" required value={newCampaign.name}
                   onChange={(e) => setNewCampaign({...newCampaign, name: e.target.value})}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
                   placeholder="e.g. Summer Festival Promo"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Total Budget (₹)</label>
                 <input 
-                  type="number" 
-                  required
-                  min="0"
-                  value={newCampaign.budget}
+                  type="number" required min="1" value={newCampaign.budget}
                   onChange={(e) => setNewCampaign({...newCampaign, budget: e.target.value})}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
                   placeholder="50000"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Initial Status</label>
                 <select 
-                  value={newCampaign.status}
-                  onChange={(e) => setNewCampaign({...newCampaign, status: e.target.value})}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
+                  value={newCampaign.status} onChange={(e) => setNewCampaign({...newCampaign, status: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
                 >
                   <option value="Draft">Draft</option>
                   <option value="Active">Active</option>
                 </select>
               </div>
               
-              <div className="pt-4 flex justify-end space-x-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
+              <div className="pt-4 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 shadow-sm transition-colors">Save Campaign</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- Modal Overlay for EDITING Campaign --- */}
+      {editingCampaign && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-indigo-950">Edit Campaign</h3>
+              <button onClick={() => setEditingCampaign(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <form onSubmit={handleUpdate} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Campaign Name</label>
+                <input 
+                  type="text" required value={editingCampaign.name}
+                  onChange={(e) => setEditingCampaign({...editingCampaign, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              
+              {/* Splitting Budget and Spent into a grid for better UI flow */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Total Budget (₹)</label>
+                  <input 
+                    type="number" required min="1" value={editingCampaign.budget}
+                    onChange={(e) => setEditingCampaign({...editingCampaign, budget: e.target.value})}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount Spent (₹)</label>
+                  <input 
+                    type="number" required min="0" value={editingCampaign.spent}
+                    onChange={(e) => setEditingCampaign({...editingCampaign, spent: e.target.value})}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Update Status</label>
+                <select 
+                  value={editingCampaign.status} onChange={(e) => setEditingCampaign({...editingCampaign, status: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-5 py-2 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 shadow-sm transition-colors"
-                >
-                  Save Campaign
-                </button>
+                  <option value="Draft">Draft</option>
+                  <option value="Active">Active</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+              
+              <div className="pt-4 flex justify-end gap-3">
+                <button type="button" onClick={() => setEditingCampaign(null)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Update Campaign</button>
               </div>
             </form>
           </div>
